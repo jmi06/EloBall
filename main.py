@@ -12,6 +12,11 @@ import time
 from datetime import datetime
 import createBSPost
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+os.chdir(current_dir)
+
+
 
 now = datetime.now()
 hour = now.hour  # Get the current hour in 24-hour format
@@ -359,6 +364,9 @@ def calc_order():
         json.dump(order, orderFile)
 
 
+    add_to_db_rankings(order)
+
+
 
 
 
@@ -444,19 +452,70 @@ def determineRanks():
     print()
 
 
-while keepGoing:
+def check_time():
+        if 4<= hour < 13:
+                keepGoing = False
+                print('end operation')
+        else: 
+                keepGoing = True
+        print('Current Hour', hour)
+
+
+def add_to_db_rankings(order):
+        #ADD TEAMS TO THE ELO DB
+    RANKINGS_API_TOKEN = os.getenv('RANKINGS_API_TOKEN')
+
+    RANKINGS_ACCOUNT_ID = os.getenv('RANKINGS_ACCOUNT_ID')
+    RANKINGS_NAMESPACE_ID = os.getenv('RANKINGS_NAMESPACE_ID')
+    RANKINGS_KV_KEY = os.getenv('RANKINGS_KV_KEY')
+
+
+
+
+    BASE_URL = f"https://api.cloudflare.com/client/v4/accounts/{RANKINGS_ACCOUNT_ID}/storage/kv/namespaces/{RANKINGS_NAMESPACE_ID}/values/{RANKINGS_KV_KEY}"
+
+    HEADERS = {
+        "Authorization": f"Bearer {RANKINGS_API_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+
+    response = requests.get(BASE_URL, headers=HEADERS)
+    response = requests.put(
+        BASE_URL,
+        headers=HEADERS,
+        data=json.dumps(order)
+    )
+    print('Games Added')
+
+
+
+def keepContinuing():
 
 
 
     setup_teams()
     fetch_games()
     calc_elo()
-    # add_to_db_teams()
-    # add_to_db_games()
+    add_to_db_teams()
+    add_to_db_games()
+    check_time()
 
 
-    if hour >= 4 or hour <= 13:
+    if hour >= 4 and  hour <= 13:
         keepGoing = False    
     
-    time.sleep(1200)
 
+    for i in range(36):
+        print('still alive',i)
+        time.sleep(30)
+
+
+
+while datetime.now().hour > 13 or datetime.now().hour < 4:
+        keepContinuing()
+
+
+
+if 4 <= datetime.now().hour < 13:
+        print('great work soldier, try again tmrw')
