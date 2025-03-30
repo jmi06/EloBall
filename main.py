@@ -321,6 +321,10 @@ def socialPost(id):
 
     ax.text(1300, 400, f"[#{team_2_rank}] {team_2['elo_after']} ({team_2['delta_elo']})", fontsize=30, color=delta_elo_color_team_2, ha='center', va='center',fontproperties=font_prop)
     ax.text(1300, 300, f"{team_2['record']}", fontsize=30, color=text, ha='center', va='center',fontproperties=font_prop)
+    
+    
+    ax.text(800, 0, f"@eloball.bsky.social", fontsize=20, color=text, ha='center', va='center',fontproperties=font_prop)
+
 
     # Overlay team logos
     ax.imshow(team_1_logo, extent=[200, 400, 500, 700])  # (x_min, x_max, y_min, y_max)
