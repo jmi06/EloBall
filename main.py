@@ -53,18 +53,20 @@ def fetch_games():
 
 
     for game in game_list:
-        if game['season']['slug'] == 'regular-season' and game['id'] not in games and game['status']['type']['name'] == 'STATUS_FINAL':
+        # game_identifier = f"{game['id']} {game['date']} {game['competitions'][0]['attendance']} {game['competitions'][0]['competitors'][0]['records'][0]['summary']}"
+        game_identifier = game['uid']
+        if game['season']['slug'] == 'regular-season' and game_identifier not in games and game['status']['type']['name'] == 'STATUS_FINAL':
             
-            games[game['id']] = {'socialpost': False, 'points_diff': abs(   float(game['competitions'][0]['competitors'][0]['score']) - float(game['competitions'][0]['competitors'][1]['score'])   ), 'date': game['date'].split("T")[0] } 
+            games[game_identifier] = {'socialpost': False, 'points_diff': abs(   float(game['competitions'][0]['competitors'][0]['score']) - float(game['competitions'][0]['competitors'][1]['score'])   ), 'date': game['date'].split("T")[0] } 
 
-            games[game['id']]['team_1'] = {'team_name': game['competitions'][0]['competitors'][0]['team']['displayName'],
+            games[game_identifier]['team_1'] = {'team_name': game['competitions'][0]['competitors'][0]['team']['displayName'],
                                            'winner': game['competitions'][0]['competitors'][0]['winner'],
                                            'score': game['competitions'][0]['competitors'][0]['score'],
                                            'logo': game['competitions'][0]['competitors'][0]['team']['logo'],
                                            
 
                                            'record': game['competitions'][0]['competitors'][0]['records'][0]['summary']}
-            games[game['id']]['team_2'] = {'team_name': game['competitions'][0]['competitors'][1]['team']['displayName'],
+            games[game_identifier]['team_2'] = {'team_name': game['competitions'][0]['competitors'][1]['team']['displayName'],
                                            'winner': game['competitions'][0]['competitors'][1]['winner'],
                                            'score': game['competitions'][0]['competitors'][1]['score'],
                                            'logo': game['competitions'][0]['competitors'][1]['team']['logo'],
@@ -137,10 +139,13 @@ def calc_elo():
             
         
         determineRanks()
-        calc_order()
+    calc_order()
+    
+    for game in games:
         if 'socialpost' in games[game]:
             if games[game]['socialpost'] == False:
                 socialPost(game)
+                print('social')
 
 
 
@@ -357,6 +362,7 @@ def calc_order():
     order['ALWest'] = dict(sorted(alWest.items(), key=lambda x: x[1]['elo'], reverse=True))
     order['ALCentral'] = dict(sorted(alCentral.items(), key=lambda x: x[1]['elo'], reverse=True))
     
+    
 
 
 
@@ -432,7 +438,7 @@ def add_to_db_games():
     response = requests.put(
         BASE_URL,
         headers=HEADERS,
-        data=json.dumps(teams)
+        data=json.dumps(games)
     )
     print('Games Added')
 

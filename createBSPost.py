@@ -107,7 +107,7 @@ def create_post():
 
     post = {
         "$type": "app.bsky.feed.post",
-        "text": f"MLB EloBall Update as of {formatted_time}: \n{postinfo['winning_team']} beat {postinfo['winning_team']} {postinfo['score']} \n#mlb",
+        "text": f"MLB EloBall Update as of {formatted_time}: \n{postinfo['winning_team']} beat {postinfo['losing_team']} {postinfo['score']} \n#mlb",
         "createdAt": now,
     }
 
