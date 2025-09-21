@@ -36,12 +36,16 @@ keepGoing = True
 def fetch_games():
 
 
+    try:
+        api_request = requests.get(api_url)
+        api_request = api_request.json()
+        print('called api')
 
-    api_request = requests.get(api_url)
-    api_request = api_request.json()
-    print('called api')
+        game_list = api_request['events']
+    except:
+        print('error')
+        return
 
-    game_list = api_request['events']
 
     keepGoing = False
     for i in game_list:
@@ -171,10 +175,12 @@ def calc_elo():
 
 def setup_teams():
     teams_url = 'http://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams'
-
-    teams_data = requests.get(teams_url)
-    teams_data =  teams_data.json()
-
+    try:
+        teams_data = requests.get(teams_url)
+        teams_data =  teams_data.json()
+    except:
+        print('error')
+        return
 
     mlb_teams = {
         "Arizona Diamondbacks": {"league": "NL", "division": "NL West"},
@@ -213,7 +219,7 @@ def setup_teams():
 
 
     for team in teams_data['sports'][0]['leagues'][0]['teams']:
-        teams[team['team']['displayName']] = {'elo': 1000, 'games': [], "league": mlb_teams[team['team']['displayName']]['league'], "division": mlb_teams[team['team']['displayName']]['division']}
+        teams[team['team']['displayName']] = {'elo': 1000, 'games': [], "league": mlb_teams[team['team']['displayName']]['league'], "division": mlb_teams[team['team']['displayName']]['division'], "record": ''}
         
 
     with open('teams.json', 'w') as file:
@@ -254,7 +260,8 @@ def socialPost(id):
 
     print('social Posting', id)
     games[id]['socialpost'] = True
-
+    with open('order.json') as orderFile:
+        order = json.load(orderFile)
 
     with open('games.json', 'w') as file:
         json.dump(games, file)
@@ -295,6 +302,14 @@ def socialPost(id):
     team_1_logo = numpy.array(team_1_logo)  # Convert to NumPy array for Matplotlib
     team_2_logo = numpy.array(team_2_logo)  # Convert to NumPy array for Matplotlib
 
+
+    for team_name, team_data in order.items():
+        if team_name == team_1['team_name']:
+            team_data['record'] = team_1['record']
+        if team_name == team_2['team_name']:
+            team_data['record'] = team_2['record']
+
+
     # Create figure
     fig, ax = plt.subplots(figsize=(16, 12))
     fig.patch.set_facecolor('#232931')
@@ -323,7 +338,7 @@ def socialPost(id):
     ax.text(1300, 300, f"{team_2['record']}", fontsize=30, color=text, ha='center', va='center',fontproperties=font_prop)
     
     
-    ax.text(800, 0, f"@eloball.bsky.social", fontsize=20, color=text, ha='center', va='center',fontproperties=font_prop)
+    ax.text(800, 0, f"eloball.pages.dev", fontsize=20, color=text, ha='center', va='center',fontproperties=font_prop)
 
 
     # Overlay team logos
@@ -337,6 +352,10 @@ def socialPost(id):
     with open('games.json', 'w') as file:
         json.dump(games, file)
 
+    with open('order.json', 'w') as orderFile:
+        json.dump(order, orderFile)
+
+
     createBSPost.create_post()
 
 
@@ -349,6 +368,31 @@ def calc_order():
     with open('teams.json') as teamFile:
         teams = json.load(teamFile)
 
+
+    with open('games.json') as file:
+        games = json.load(file)
+
+
+    for team_name, team_data in teams.items():
+        if team_data['games']: 
+            lastGame = team_data['games'][-1] 
+            print(lastGame)
+            
+            if lastGame in games and games[lastGame]['team_1']['team_name'] == team_name:
+                team_data['record'] = games[lastGame]['team_1']['record']
+            elif lastGame in games and games[lastGame]['team_2']['team_name'] == team_name:
+                team_data['record'] = games[lastGame]['team_2']['record']
+            else:
+                print('didnt work')
+                
+    
+    with open('teams.json', 'w') as file:
+        json.dump(teams, file)
+
+
+
+
+
     al_teams = {k: v for k, v in teams.items() if v["league"] == "AL"}
     nl_teams = {k: v for k, v in teams.items() if v["league"] == "NL"}
 
@@ -358,7 +402,7 @@ def calc_order():
 
     nlEast = {k: v for k, v in teams.items() if v["division"] == "NL East"}
     nlWest = {k: v for k, v in teams.items() if v["division"] == "NL West"}
-    nlCentral = {k: v for k, v in teams.items() if v["division"] == "NL Centrnl"}
+    nlCentral = {k: v for k, v in teams.items() if v["division"] == "NL Central"}
 
     
     order['all'] = dict(sorted(teams.items(), key=lambda x: x[1]['elo'], reverse=True))
@@ -372,16 +416,17 @@ def calc_order():
     order['ALEast'] = dict(sorted(alEast.items(), key=lambda x: x[1]['elo'], reverse=True))
     order['ALWest'] = dict(sorted(alWest.items(), key=lambda x: x[1]['elo'], reverse=True))
     order['ALCentral'] = dict(sorted(alCentral.items(), key=lambda x: x[1]['elo'], reverse=True))
-    
-    
 
+
+
+    
 
 
     with open('order.json', 'w') as orderFile:
         json.dump(order, orderFile)
 
 
-    add_to_db_rankings(order)
+    #add_to_db_rankings(order)
 
 
 
@@ -413,15 +458,17 @@ def add_to_db_teams():
         "Content-Type": "application/json"
     }
 
-
-    response = requests.get(BASE_URL, headers=HEADERS)
-    response = requests.put(
-        BASE_URL,
-        headers=HEADERS,
-        data=json.dumps(teams)
-    )
-    print('Teams Added')
-
+    try:
+        response = requests.get(BASE_URL, headers=HEADERS)
+        response = requests.put(
+            BASE_URL,
+            headers=HEADERS,
+            data=json.dumps(teams)
+        )
+        print('Teams Added')
+    except:
+        print('error')
+        return
 
 
 def add_to_db_games():
@@ -444,15 +491,17 @@ def add_to_db_games():
         "Content-Type": "application/json"
     }
 
-
-    response = requests.get(BASE_URL, headers=HEADERS)
-    response = requests.put(
-        BASE_URL,
-        headers=HEADERS,
-        data=json.dumps(games)
-    )
-    print('Games Added')
-
+    try:
+        response = requests.get(BASE_URL, headers=HEADERS)
+        response = requests.put(
+            BASE_URL,
+            headers=HEADERS,
+            data=json.dumps(games)
+        )
+        print('Games Added')
+    except:
+        print('error')
+        return
 
 
 
@@ -478,8 +527,15 @@ def check_time():
         print('Current Hour', hour)
 
 
-def add_to_db_rankings(order):
+def add_to_db_rankings():
         #ADD TEAMS TO THE ELO DB
+    
+    with open('order.json') as file:
+        currentOrder = json.load(file)
+
+
+
+
     RANKINGS_API_TOKEN = os.getenv('RANKINGS_API_TOKEN')
 
     RANKINGS_ACCOUNT_ID = os.getenv('RANKINGS_ACCOUNT_ID')
@@ -496,15 +552,23 @@ def add_to_db_rankings(order):
         "Content-Type": "application/json"
     }
 
+    try:
+        # response = requests.get(BASE_URL, headers=HEADERS)
+        response = requests.put(
+            BASE_URL,
+            headers=HEADERS,
+            data=json.dumps(currentOrder)
+        )
 
-    response = requests.get(BASE_URL, headers=HEADERS)
-    response = requests.put(
-        BASE_URL,
-        headers=HEADERS,
-        data=json.dumps(order)
-    )
-    print('Games Added')
 
+        if response.status_code == 200:
+            print('Rankings updated successfully')
+        else:
+            print(f'Failed to update rankings: {response.status_code} {response.text}')
+        print('Games Added')
+    except:
+        print('error')
+        return
 
 
 def keepContinuing():
@@ -516,6 +580,7 @@ def keepContinuing():
     calc_elo()
     add_to_db_teams()
     add_to_db_games()
+    add_to_db_rankings()
     check_time()
 
 
@@ -529,7 +594,7 @@ def keepContinuing():
 
 
 
-while datetime.now().hour > 13 or datetime.now().hour < 4:
+while datetime.now().hour >= 13 or datetime.now().hour < 4:
         keepContinuing()
 
 
