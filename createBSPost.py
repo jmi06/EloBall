@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-import tweepy
+# import tweepy
 import time
 load_dotenv()
 
@@ -179,7 +179,7 @@ def create_post():
         attempts+=1
         if attempts < 3:
             create_post()
-    twitter_post()
+    # twitter_post()
 
 
 def twitter_post():
