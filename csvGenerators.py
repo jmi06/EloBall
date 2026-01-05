@@ -57,7 +57,7 @@ def byGame():
 
         dfString = df.to_string()
 
-        toDump = dfString
+        toDump = {"byDate": dfString}
 
         #ADD TEAMS TO THE ELO DB
         GAMES_API_TOKEN = os.getenv('GAMES_API_TOKEN')
